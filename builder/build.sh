@@ -10,15 +10,19 @@ else
 	fi
 fi
 
+env_url="$2"
+
 app_dir=/app
 build_root=/tmp/build
 cache_root=/tmp/cache
 buildpack_root=/tmp/buildpacks
+env_dir=/tmp/envdir
 
 mkdir -p $app_dir
 mkdir -p $cache_root
 mkdir -p $buildpack_root
 mkdir -p $build_root/.profile.d
+mkdir -p $env_dir
 
 function output_redirect() {
 	if [[ "$slug_file" == "-" ]]; then
@@ -88,9 +92,17 @@ if [[ -n "$selected_buildpack" ]]; then
 	exit 1
 fi
 
-## Buildpack compile
+## Get ENV_DIR files
+if [[ -n "$env_url" ]]; then
+  curl -0 -s "$env_url" | tar x -C "$env_dir"
+fi
 
-$selected_buildpack/bin/compile "$build_root" "$cache_root" | ensure_indent
+## Buildpack compile
+if [[ -n "$env_url" ]]; then
+  $selected_buildpack/bin/compile "$build_root" "$cache_root" "$env_dir" | ensure_indent
+else
+  $selected_buildpack/bin/compile "$build_root" "$cache_root" | ensure_indent
+fi
 
 $selected_buildpack/bin/release "$build_root" "$cache_root" > $build_root/.release
 
